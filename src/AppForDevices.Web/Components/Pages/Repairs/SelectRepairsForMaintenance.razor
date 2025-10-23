@@ -1,0 +1,209 @@
+﻿@page "/repairs/selectrepairsformaintenance"
+@using AppForDevices.Web.API
+@using Microsoft.AspNetCore.Authorization
+@inject ILogger<SelectRepairsForMaintenance> logger
+@inject AppForDevicesAPIClient apiclient
+@inject ReceiptStateContainer receiptState
+@inject NavigationManager navigation
+@rendermode InteractiveServer
+@attribute [Authorize]
+@attribute [StreamRendering]
+
+<h1 class="mb-3">Select Devices For Purchase</h1>
+<p class="text-secondary mb-4">Choose the elements to be introduced in your cart.</p>
+
+<div class="container-fluid">
+
+    <!-- Mensaje de error, si aplica -->
+    @if (!HideErrorMessage)
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-danger" role="alert" hidden="@HideErrorMessage">
+                    <i class="bi bi-exclamation-circle-fill me-2"></i>
+                    <p id="ErrorsShown">Errors: @errors</p>
+
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Columna principal: Filtros y lista de dispositivos -->
+        <div class="col-8">
+
+            <!-- Tarjeta para mostrar el conteo de dispositivos seleccionados -->
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Selected Repairs</strong>
+                    <span class="badge bg-primary ms-auto">@receiptState.Receipt.ReceiptItems.Count</span>
+                </div>
+            </div>
+
+            <!-- Tarjeta para filtrar dispositivos -->
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-funnel me-2"></i>
+                    <strong>Filter Repairs</strong>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="filterbyName" class="form-label fw-bold">Name</label>
+                        <div class="input-group">
+                            <span class="input-group-text" id="boton_filtro_nombre"><i class="bi bi-tag-fill"></i></span>
+                            <InputText class="form-control" @bind-Value="@repairName" id="filterbyName" placeholder="Name" aria-label="Name" aria-describedby="basic-addon1" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="filterbyScale" class="form-label fw-bold">Scale</label>
+                        <div class="input-group">
+                            <span class="input-group-text" id="boton_filtro_escala"><i class="bi bi-palette-fill"></i></span>
+                            <InputText class="form-control" @bind-Value="@repairScale" id="filterbyScale" placeholder="Scale" aria-label="Scale" aria-describedby="basic-addon1" />
+                        </div>
+                    </div>
+                    <button id="buttonSearch" type="button" class="btn btn-primary" @onclick=@SearchRepairs>
+                        <i class="bi bi-search me-1"></i>Search Repairs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tarjeta para la lista de dispositivos disponibles -->
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-hdd-network me-2"></i>
+                    <strong>Repairs Available</strong>
+                    @if (repairs != null && repairs.Count > 0)
+                    {
+                        <span class="badge bg-info text-dark ms-3">@repairs.Count found</span>
+                    }
+                </div>
+                <div class="card-body p-0">
+                    @if (repairs == null)
+                    {
+                        <div class="p-3" id="loading_repairs_div">
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-hourglass-split me-2">Loading repairs...</i>
+                            </p>
+                        </div>
+                    }else if(repairs.Count == 0)
+                    {
+                        <div class="p-3" id="loading_repairs_div">
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-hourglass-split me-2">Loading repairs...</i>
+                            </p>
+                        </div>
+                    }else
+                    {
+                        <table class="table table-striped table-hover mb-0" id="repairsAvailable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col"><i class="bi bi-device-mobile me-1"></i>Name</th>
+                                    <th scope="col"><i class="bi bi-laptop me-1"></i>Scale</th>
+                                    <th scope="col"><i class="bi bi-bootstrap me-1"></i>Description</th>
+                                    <th scope="col"><i class="bi bi-currency-dollar me-1"></i>Cost</th>
+                                    <th scope="col"><i class="bi bi-plus-square me-1"></i>Select</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (RepairDTO repair in repairs)
+                                {
+                                    <tr id="repair_@repair.Id">
+                                        <td>@repair.Name</td>
+                                        <td>@repair.Scale</td>
+                                        <td>@repair.Description</td>
+                                        <td>@repair.Cost</td>
+                                        <td>
+                                            <button id="addRepair_@repair.Id" @onclick="@(()=>AddRepair(repair))" type="button" class="btn btn-outline-primary btn-sm">
+                                                <i class="bi bi-cart-plus me-1"></i>Add Repair
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna lateral: Carrito de compras -->
+        <div class="col-4" hidden="@hideShoppingCart">
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-cart4 me-2"></i>
+                    <strong>Shopping Cart</strong>
+                </div>
+                <div class="card-body">
+                    @foreach (ReceiptItemDTO item in receiptState.Receipt.ReceiptItems)
+                    {
+                        <div class="d-flex align-items-center mb-2 p-2 border-bottom" id="div_shopping_cart">
+                            <span class="flex-grow-1">
+                                <i class="bi bi-phone-fill me-1"></i>@item.Name - @item.Cost €
+                            </span>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="removeRepair_@item.RepairId" @onclick="@(()=>RemoveReceiptItem(item))" title="Remove this device">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    }
+                    <div class="row">
+                        <button type="button" class="btn btn-primary" hidden="@hideContinueOption" id="rentRepairsButton" @onclick=@RentRepairs>Carry out repairs</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    public bool hideContinueOption {get{ return receiptState.Receipt.ReceiptItems.Count == 0; }}
+    private ICollection<RepairDTO>? repairs { get; set; } = new List<RepairDTO>();
+    private string repairName;
+    private string repairScale;
+    private bool hideShoppingCart { get { return receiptState.Receipt.ReceiptItems.Count == 0; } }
+    private bool HideErrorMessage { get { return repairs != null && repairs.Count > 0; } }
+    private bool hideErrors { get { return errors.Length == 0; } }
+    private string errors = "";
+    private bool hideReceiptRepairsButton { get { return receiptState.Receipt.ReceiptItems.Count == 0; } }
+
+
+
+    private void AddRepair(RepairDTO repair)
+    {
+        receiptState.AddRepairToReceipt(repair);
+    }
+
+    protected void RemoveReceiptItem(ReceiptItemDTO item)
+    {
+        receiptState.RemoveReceiptItem(item);
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        SearchRepairs();
+        base.OnInitializedAsync();
+    }
+
+
+    protected async void SearchRepairs()
+    {
+        try
+        {
+            repairs = await apiclient.GetRepairsForMaintenanceAsync(repairName, repairScale,null);
+        }
+        catch (ApiException ex)
+        {
+            repairs = new List<RepairDTO>();
+            errors = "Error: We could not connect to the system, please, try it later on!";
+            logger.LogError($"{DateTime.Now} Error: error connecting to the API");
+
+        }
+        StateHasChanged();
+    }
+    private void RentRepairs()
+    {
+        navigation.NavigateTo("/receipts/createreceipt");
+    }
+}

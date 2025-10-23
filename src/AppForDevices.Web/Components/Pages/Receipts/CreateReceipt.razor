@@ -1,0 +1,255 @@
+﻿@page "/receipts/createreceipt"
+@using AppForDevices.Web.API
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using System.Text.Json
+@using AppForDevices.Web.Components.Shared
+@using AppForDevices.Web.Components.Pages.Repairs
+
+@rendermode InteractiveServer
+
+@inject AppForDevicesAPIClient apiservice
+@inject ILogger<CreateReceipt> logger
+@inject ReceiptStateContainer receiptState
+@inject NavigationManager Navigation
+
+@attribute [Authorize]
+@attribute [StreamRendering]
+
+<h1>Create Receipt</h1>
+<EditForm Model="receipt" OnValidSubmit="OpenDialog" FormName="main_form_create_receipt">
+    @* Display validation errors *@
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <ul class="validation-errors" hidden=@hideErrors>
+        @foreach (string error in errors)
+        {
+            <li class="validation-message">@error</li>
+        }
+    </ul>
+
+    @* Form inputs in a single column *@
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center">
+            <i class="bi bi-cart-fill me-2"></i>
+            <strong>Receipt Information</strong>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="name_surname" class="form-label fw-bold">Name and Surname:</label>
+                <div class="input-group">
+                    <span class="input-group-text" id="span_name_surname"><i class="bi bi-person-fill"></i></span>
+                    <InputText class="form-control" @bind-Value="receipt.CustomerNameSurname" id="name_surname" placeholder="Name and Surname" aria-label="Name and Surname" aria-describedby="basic-addon1" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="delivery_address" class="form-label fw-bold">Delivery Address:</label>
+                <div class="input-group">
+                    <span class="input-group-text" id="span_delivery_address"><i class="bi bi-geo-alt-fill"></i></span>
+                    <InputText class="form-control" @bind-Value="receipt.DeliveryAddress" id="delivery_address" placeholder="Delivery Address" aria-label="Delivery Address" aria-describedby="basic-addon2" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="payment" class="form-label fw-bold">Type of Payment Method:</label>
+                <div class="input-group">
+                    <span class="input-group-text" id="span_payment"><i class="bi bi-credit-card-fill"></i></span>
+                    <InputSelect id="payment" @bind-Value="receipt.PaymentMethod" class="form-select" aria-label="Payment Method" aria-describedby="basic-addon3">
+                        <option value="@PaymentMethodTypes.CreditCard" default>Credit Card</option>
+                        <option value="@PaymentMethodTypes.PayPal">PayPal</option>
+                        <option value="@PaymentMethodTypes.Cash">Cash</option>
+                    </InputSelect>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="total_price" class="form-label fw-bold">Total Price:</label>
+                <div class="input-group">
+                    <span class="input-group-text" id="span_total_price"><i class="bi bi-currency-euro"></i></span>
+                    <label class="form-control" id="total_price">@receipt.TotalPrice €</label>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit" id="submit">
+                    <i class="bi bi-bag-check-fill me-1"></i>Carry out Repairs
+                </button>
+                <button class="btn btn-outline-primary" type="button" id="modifyReceiptItems" @onclick="ModifyReceiptItems">
+                    <i class="bi bi-pencil-fill me-1"></i>Modify your shopping cart
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    @* Table for device receipt details *@
+    <div class="card">
+        <div class="card-header d-flex align-items-center">
+            <i class="bi bi-cart-fill me-2"></i>
+            <strong>Receipt Items</strong>
+            @if (receipt.ReceiptItems != null && receipt.ReceiptItems.Count > 0)
+            {
+                <span class="badge bg-info text-dark ms-3">@receipt.ReceiptItems.Count items</span>
+            }
+        </div>
+        <div class="card-body p-0">
+            @if (receipt.ReceiptItems == null || !receipt.ReceiptItems.Any())
+            {
+                <div class="p-3">
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-exclamation-circle me-2"></i>No items found in the receipt.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <table class="table table-striped table-hover mb-0" id="TableOfRentalItems">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col"><i class="bi bi-device-mobile me-1"></i>Name</th>
+                            <th scope="col"><i class="bi bi-laptop me-1"></i>Scale</th>
+                             <th scope="col"><i class="bi bi-bootstrap me-1"></i>Description</th>
+                            <th scope="col"><i class="bi bi-currency-dollar me-1"></i>Cost</th>
+                            <th scope="col"><i class="bi bi-plus-square me-1"></i>Model</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in receipt.ReceiptItems)
+                        {
+                            <tr id="repair_@item.RepairId">
+                                <td>@item.Name</td>
+                                <td>@item.Scale</td>
+                                 <td>@item.Description</td> 
+                                @* <td>@item.Color</td> *@
+                                <td>@item.Cost</td>
+                                <td>
+                                    <InputText @bind-Value="item.Model" class="form-control form-control-sm" id="@($"model_{item.RepairId}")" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+
+</EditForm>
+
+@if (DialogIsOpen)
+{
+    <Dialog Caption="Rent Repairs"
+            Message="Do you want to proceed to rent the selected repairs?"
+            OnClose="@OnDialogClose"
+            Type=Dialog.Category.SaveNot>
+    </Dialog>
+}
+
+
+@code {
+    private ReceiptForCreateDTO receipt => receiptState.Receipt;
+    //ReceiptForCreateDTO receipt = new ReceiptForCreateDTO();
+    
+    private String model = "";
+    private bool DialogIsOpen = false;
+    private String nameSurname = "";
+    String deliveryAddress = "";
+    private bool OkCancel = false; //ok=true cancel=false
+    private List<string> errors = new List<string>();
+    private bool hideErrors => errors.Count == 0;
+
+    private void OpenDialog()
+    {
+        DialogIsOpen = true;
+    }
+
+    private void ModifyReceiptItems()
+    {
+        Navigation.NavigateTo("/repairs/selectrepairsformaintenance");
+    }
+
+    private async Task OnDialogClose(bool isOk)
+    {
+
+
+        OkCancel = isOk;
+        DialogIsOpen = false;
+        if (OkCancel)
+        {
+            // Process the data introduced by the user if they are valid
+            if (receipt.ReceiptItems.Count() > 0)
+            {
+                try {
+                    ReceiptForCreateDTO receiptDTO = new API.ReceiptForCreateDTO()
+                    {
+                        CustomerNameSurname=receipt.CustomerNameSurname,
+                        CustomerUserName=receipt.CustomerUserName,
+                        DeliveryAddress=receipt.DeliveryAddress,
+                        PaymentMethod=(API.PaymentMethodTypes)receipt.PaymentMethod,
+                        
+                        ReceiptItems= receipt.ReceiptItems.Select(ri=>new API.ReceiptItemDTO()
+                        {
+                            RepairId=ri.RepairId, Name=ri.Name, Scale=ri.Scale,Cost=ri.Cost, Description=ri.Description, Model = ri.Model
+                        }
+                        ).ToList(),
+                    };
+                    var rented = await apiservice.CreateReceiptAsync(receiptDTO);
+                    receiptState.ReceiptProcessed();
+                    Navigation.NavigateTo($"/receipts/detailreceipt/?ReceiptID={rented.Id}");
+                }
+                catch (ApiException<ValidationProblemDetails> apiexceptionvalidation)
+                {
+                    //we need to inform user that there was a 400 error
+                    string message = "Error while processing your request, please try again later!";
+
+                    if (apiexceptionvalidation.Result.Errors.Values != null)
+                    {
+                        message = "";
+                        foreach (var errors in apiexceptionvalidation.Result.Errors.Values)
+                            //https://learn.microsoft.com/en-us/dotnet/api/system.string.join?view=net-7.0
+                            message = string.Join("(*) ", message, string.Join(" (*) ", errors));
+                    }
+                    OpenDialogOK(message);
+                }
+                catch (ApiException apiexception)
+                {
+                    //we need to inform user that there was some other error while processing the request
+                    string message = "Error while processing your request, please try again later!";
+                    OpenDialogOK(message);
+                }
+            }
+        }
+    }
+
+    private bool DialogOKIsOpen;
+    private string DialogOKMessage;
+    private void OpenDialogOK(string message)
+    {
+        DialogOKIsOpen = true;
+        DialogOKMessage = message;
+    }
+    private async Task OnDialogOKClose()
+    {
+        DialogOKIsOpen = false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        if (authenticationState is not null)
+        {
+            var authState = await authenticationState;
+            var user = authState?.User;
+
+            if (user is not null)
+            {
+                if (user.Identity is not null && user.Identity.IsAuthenticated)
+                {
+                    receipt.CustomerUserName= user.Identity.Name;
+                }
+            }
+        }
+    }
+
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+
+
+}
