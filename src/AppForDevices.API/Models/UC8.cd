@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="NameAndType">
+  <Class Name="AppForDevices.API.Models.Receipt">
+    <Position X="12.25" Y="1.25" Width="3" />
+    <AssociationLine Name="ReceiptItems" Type="AppForDevices.API.Models.ReceiptItem">
+      <MemberNameLabel ManuallyPlaced="true" ManuallySized="true">
+        <Position X="0.11" Y="0.06" Height="0.182" Width="2.242" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <AssociationLine Name="ApplicationUser" Type="AppForDevices.API.Models.ApplicationUser" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="12.25" Y="3.117" />
+        <Point X="10.25" Y="3.117" />
+        <Point X="10.25" Y="4" />
+      </Path>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAAHAAAAAAAAAAAQgCAAAAAAAAQAQAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\Receipt.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="ApplicationUser" />
+    </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Property Name="ReceiptItems" />
+    </ShowAsCollectionAssociation>
+  </Class>
+  <Class Name="AppForDevices.API.Models.ApplicationUser">
+    <Position X="8.5" Y="4" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAgAAAAAQABAAAAIAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\ApplicationUser.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="AppForDevices.API.Models.ReceiptItem">
+    <Position X="7.25" Y="1" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>QAAAAAAAAAAAAAAAgAAAAAEAACAAAIAAACgAAAAAAAA=</HashCode>
+      <FileName>Models\ReceiptItem.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Repair" />
+      <Property Name="Receipt" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="AppForDevices.API.Models.Repair">
+    <Position X="2.5" Y="1" Width="2.5" />
+    <AssociationLine Name="Scale" Type="AppForDevices.API.Models.Scale" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="2.5" Y="1.812" />
+        <Point X="1.5" Y="1.812" />
+        <Point X="1.5" Y="3.25" />
+      </Path>
+    </AssociationLine>
+    <AssociationLine Name="ReceiptItems" Type="AppForDevices.API.Models.ReceiptItem">
+      <MemberNameLabel ManuallyPlaced="true" ManuallySized="true">
+        <Position X="0.126" Y="0.028" Height="0.182" Width="2.242" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>ACACAAAAAAAgAAAQgAIAABQAAAAAAIAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\Repair.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Scale" />
+    </ShowAsAssociation>
+    <ShowAsCollectionAssociation>
+      <Property Name="ReceiptItems" />
+    </ShowAsCollectionAssociation>
+  </Class>
+  <Class Name="AppForDevices.API.Models.Scale">
+    <Position X="0.5" Y="3.25" Width="2" />
+    <AssociationLine Name="Repairs" Type="AppForDevices.API.Models.Repair">
+      <MemberNameLabel ManuallyPlaced="true" ManuallySized="true">
+        <Position X="-0.429" Y="0.06" Height="0.182" Width="1.805" />
+      </MemberNameLabel>
+    </AssociationLine>
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAAQAAAgAAAAAQAAAAAAIAAAAAAAAAAAAA=</HashCode>
+      <FileName>Models\Scale.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsCollectionAssociation>
+      <Property Name="Repairs" />
+    </ShowAsCollectionAssociation>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
